@@ -399,13 +399,7 @@
   {/if}
 
   <div class="controls">
-    <button
-      class="cyber-btn"
-      on:click={startNewGame}
-      disabled={isOnline && game && game.currentPlayer !== myPlayerId}
-    >
-      リセット
-    </button>
+    <button class="cyber-btn" on:click={startNewGame}> リセット </button>
     <button class="cyber-btn" on:click={onBack}>メニュー</button>
   </div>
 </div>
@@ -415,21 +409,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 10px;
     z-index: 10;
+    min-height: 100vh;
+    padding: 10px 0;
+    box-sizing: border-box;
+    overflow-y: auto;
   }
   h1 {
     font-family: var(--font-display);
-    font-size: 2.5rem;
+    font-size: 2rem;
     background: linear-gradient(90deg, var(--p1-color), #fff, var(--p2-color));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     margin: 0;
+    padding: 5px 0;
   }
   .controls {
     display: flex;
-    gap: 20px;
+    gap: 15px;
+    margin-top: 10px;
   }
 
   .status-bar {
@@ -438,8 +438,8 @@
     align-items: center;
     width: 100%;
     max-width: 600px;
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 10px;
+    padding: 10px;
     background: rgba(10, 10, 10, 0.9);
     border: 1px solid #333;
     border-radius: 12px;
