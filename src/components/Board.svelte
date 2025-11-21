@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount, onDestroy } from "svelte";
   import CellComponent from "./Cell.svelte";
   import { Phase } from "../lib/game/types";
+  import { getCharacterStats } from "../lib/game/Character";
   import type { Game } from "../lib/game/Game";
 
   export let game: Game;
@@ -59,7 +60,7 @@
   $: shootableTargets = (() => {
     if (game.phase !== Phase.SHOOT || version < 0) return [];
     const unit = game.units[game.currentPlayer];
-    return game.getShootableTargets(unit.r, unit.c);
+    return game.getShootableTargets(unit.r, unit.c, game.currentPlayer);
   })();
 
   function isShootableTarget(r: number, c: number, v: number): boolean {
@@ -79,6 +80,10 @@
   ): boolean {
     return !!dPos && dPos.r === r && dPos.c === c;
   }
+
+  // Get character shapes
+  $: p1CharacterShape = getCharacterStats(game.characters[1]).visualShape;
+  $: p2CharacterShape = getCharacterStats(game.characters[2]).visualShape;
 </script>
 
 <div
@@ -100,6 +105,8 @@
         isDestroyed={checkDestroyed(r, c, destroyedPos)}
         {myPlayerId}
         isMyUnit={cell.hasUnit() && cell.unit === myPlayerId}
+        {p1CharacterShape}
+        {p2CharacterShape}
         on:click
       />
     {/each}

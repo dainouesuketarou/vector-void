@@ -12,6 +12,8 @@
   export let isDestroyed: boolean = false;
   export let myPlayerId: number = 1;
   export let isMyUnit: boolean = false;
+  export let p1CharacterShape: string = "circle";
+  export let p2CharacterShape: string = "circle";
 
   const dispatch = createEventDispatcher();
 
@@ -44,8 +46,10 @@
   {/if}
 
   {#if cell.unit}
+    {@const shape =
+      cell.unit === PlayerId.P1 ? p1CharacterShape : p2CharacterShape}
     <div
-      class="unit"
+      class="unit {shape}"
       class:p1={cell.unit === PlayerId.P1}
       class:p2={cell.unit === PlayerId.P2}
     ></div>
@@ -168,6 +172,29 @@
     z-index: 3;
     position: relative;
   }
+
+  .unit.triangle {
+    border-radius: 0;
+    border: none;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background: currentColor;
+    box-shadow: 0 0 10px currentColor;
+  }
+
+  .unit.square {
+    border-radius: 8px;
+    clip-path: polygon(
+      30% 0%,
+      70% 0%,
+      100% 30%,
+      100% 70%,
+      70% 100%,
+      30% 100%,
+      0% 70%,
+      0% 30%
+    );
+  }
+
   .p1 {
     color: var(--p1-color);
   }

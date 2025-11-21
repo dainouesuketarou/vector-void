@@ -1,5 +1,6 @@
 import { Board } from './Board';
-import { CellType, Phase, PlayerId, type MapConfig, type Position } from './types';
+import { CellType, Phase, PlayerId, type MapConfig, type Position, CharacterType } from './types';
+import { getCharacterStats } from './Character';
 
 import { RNG } from '../utils/rng';
 
@@ -8,14 +9,27 @@ export class Game {
     currentPlayer: PlayerId = PlayerId.P1;
     phase: Phase;
     units: Record<PlayerId, Position>;
+    characters: Record<PlayerId, CharacterType>;
+    moveCounter: number = 0; // Track number of moves made this turn
     gameOver: boolean = false;
     winner: PlayerId | null = null;
     rng: RNG;
 
-    constructor(mapConfig: MapConfig, seed: number = Date.now()) {
+    constructor(
+        mapConfig: MapConfig,
+        p1Character: CharacterType = CharacterType.VOID_DRIFTER,
+        p2Character: CharacterType = CharacterType.VOID_DRIFTER,
+        seed: number = Date.now()
+    ) {
         this.rng = new RNG(seed);
         this.board = new Board(mapConfig, this.rng);
         this.phase = Phase.MOVE;
+        
+        // Character Selection
+        this.characters = {
+            [PlayerId.P1]: p1Character,
+            [PlayerId.P2]: p2Character
+        };
         
         // Initial Positions
         this.units = {
@@ -85,29 +99,60 @@ export class Game {
         if (c2) c2.unit = PlayerId.P2;
     }
 
-    move(toR: number, toC: number): boolean {
+    move(r: number, c: number): boolean {
         if (this.gameOver || this.phase !== Phase.MOVE) return false;
-        if (!this.isValidMove(this.currentPlayer, toR, toC)) return false;
+        if (!this.isValidMove(this.currentPlayer, r, c)) return false;
 
-        // Execute Move
-        this.units[this.currentPlayer] = { r: toR, c: toC };
-        
+        const cell = this.board.getCell(r, c);
+        if (!cell) return false;
+
+        // Clear old position
+        const oldPos = this.units[this.currentPlayer];
+        this.board.grid[oldPos.r][oldPos.c].unit = null;
+
+        // Set new position
+        this.units[this.currentPlayer] = { r, c };
+        cell.unit = this.currentPlayer;
+
         // Check Teleport
-        const destCell = this.board.getCell(toR, toC);
-        if (destCell && destCell.isTeleport()) {
-            const teleDest = this.board.getTeleportDestination(toR, toC);
+        if (cell.isTeleport()) {
+            const teleDest = this.board.getTeleportDestination(r, c);
             if (teleDest) {
                 // Teleport!
                 const opponent = this.currentPlayer === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
                 const oppPos = this.units[opponent];
                 if (teleDest.r !== oppPos.r || teleDest.c !== oppPos.c) {
                      this.units[this.currentPlayer] = teleDest;
+                     // Update the board for the teleported unit
+                     this.board.grid[r][c].unit = null; // Clear unit from original teleport cell
+                     const newTeleportCell = this.board.getCell(teleDest.r, teleDest.c);
+                     if (newTeleportCell) newTeleportCell.unit = this.currentPlayer;
                 }
             }
         }
 
-        this.updateBoardUnits();
-        this.phase = Phase.SHOOT;
+        // Handle double move for Swift Shadow
+        const characterStats = getCharacterStats(this.characters[this.currentPlayer]);
+        this.moveCounter++;
+        
+        if (this.moveCounter < characterStats.moveCount) {
+            // Check if there are any valid moves remaining
+            const hasValidMoves = this.hasAnyValidMoves(this.currentPlayer);
+            
+            if (!hasValidMoves) {
+                // No valid moves available, skip to SHOOT phase
+                this.moveCounter = 0;
+                this.checkAndAdvancePhase();
+                return true;
+            }
+            
+            // Can move again, stay in MOVE phase
+            return true;
+        }
+        
+        // All moves exhausted, advance to SHOOT phase
+        this.moveCounter = 0;
+        this.checkAndAdvancePhase();
         return true;
     }
 
@@ -115,8 +160,16 @@ export class Game {
         const unit = this.units[player];
         const dr = Math.abs(r - unit.r);
         const dc = Math.abs(c - unit.c);
+        const characterStats = getCharacterStats(this.characters[player]);
 
-        if (dr > 1 || dc > 1 || (dr === 0 && dc === 0)) return false;
+        // Check if move is within range
+        if (dr > characterStats.moveRange || dc > characterStats.moveRange || (dr === 0 && dc === 0)) return false;
+        
+        // Check if move is diagonal (for orthogonal-only characters)
+        if (characterStats.movePattern === 'orthogonal') {
+            // Only allow moves where either dr=0 or dc=0 (not both non-zero)
+            if (dr > 0 && dc > 0) return false; // Diagonal move not allowed
+        }
         
         const cell = this.board.getCell(r, c);
         if (!cell) return false; 
@@ -124,32 +177,45 @@ export class Game {
         if (cell.isHole() || cell.isMirror()) return false;
         if (cell.hasUnit()) return false;
 
-        if (!this.canShootFrom(r, c)) return false;
+        if (!this.canShootFrom(r, c, player)) return false;
 
         return true;
     }
 
-    canShootFrom(r: number, c: number): boolean {
-        const dirs = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    canShootFrom(r: number, c: number, player: PlayerId): boolean {
+        const dirs = this.getValidDirections(player);
         for (const dir of dirs) {
-            if (this.simulateShot(r, c, dir)) return true;
+            if (this.simulateShot(r, c, dir, player)) return true;
         }
         return false;
     }
 
-    getValidShotDirs(r: number, c: number): string[] {
-        const dirs = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-        return dirs.filter(dir => this.simulateShot(r, c, dir));
+    getValidDirections(player: PlayerId): string[] {
+        const stats = getCharacterStats(this.characters[player]);
+        if (stats.shootPattern === 'orthogonal') {
+            return ['n', 's', 'e', 'w'];
+        }
+        return ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
     }
 
-    simulateShot(startR: number, startC: number, dirStr: string): boolean {
+    getValidShotDirs(r: number, c: number, player: PlayerId): string[] {
+        const dirs = this.getValidDirections(player);
+        return dirs.filter(dir => this.simulateShot(r, c, dir, player));
+    }
+
+    simulateShot(startR: number, startC: number, dirStr: string, player: PlayerId): boolean {
+        const stats = getCharacterStats(this.characters[player]);
         let { dr, dc } = this.parseDir(dirStr);
         let currR = startR + dr;
         let currC = startC + dc;
+        let distance = 1;
 
         while (true) {
             const cell = this.board.getCell(currR, currC);
             if (!cell) return false; 
+
+            // Check shoot range
+            if (stats.shootRange !== -1 && distance > stats.shootRange) return false;
 
             if (cell.hasUnit()) return true; // Valid to shoot units now
             if (cell.isHole()) return false;
@@ -162,12 +228,12 @@ export class Game {
     }
 
     // Get all shootable target positions from a given position
-    getShootableTargets(fromR: number, fromC: number): Position[] {
+    getShootableTargets(fromR: number, fromC: number, player: PlayerId): Position[] {
         const targets: Position[] = [];
-        const dirs = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+        const dirs = this.getValidDirections(player);
         
         for (const dir of dirs) {
-            const target = this.getShootTarget(fromR, fromC, dir);
+            const target = this.getShootTarget(fromR, fromC, dir, player);
             if (target) {
                 // Avoid duplicates
                 if (!targets.some(t => t.r === target.r && t.c === target.c)) {
@@ -180,14 +246,19 @@ export class Game {
     }
 
     // Calculate where a shot in a given direction will land
-    private getShootTarget(startR: number, startC: number, dirStr: string): Position | null {
+    private getShootTarget(startR: number, startC: number, dirStr: string, player: PlayerId): Position | null {
+        const stats = getCharacterStats(this.characters[player]);
         let { dr, dc } = this.parseDir(dirStr);
         let currR = startR + dr;
         let currC = startC + dc;
+        let distance = 1;
 
         while (true) {
             const cell = this.board.getCell(currR, currC);
             if (!cell) return null;
+            
+            // Check shoot range
+            if (stats.shootRange !== -1 && distance > stats.shootRange) return null;
             
             if (cell.hasUnit()) return { r: currR, c: currC }; // Unit is a target
             if (cell.isHole()) return null;
@@ -197,16 +268,18 @@ export class Game {
                 return { r: currR, c: currC };
             }
 
-            return null;
+            currR += dr;
+            currC += dc;
+            distance++;
         }
     }
 
     // Find direction from current position to target
-    private findDirectionToTarget(from: Position, target: Position): string | null {
-        const dirs = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    private findDirectionToTarget(from: Position, target: Position, player: PlayerId): string | null {
+        const dirs = this.getValidDirections(player);
         
         for (const dir of dirs) {
-            const calcTarget = this.getShootTarget(from.r, from.c, dir);
+            const calcTarget = this.getShootTarget(from.r, from.c, dir, player);
             if (calcTarget && calcTarget.r === target.r && calcTarget.c === target.c) {
                 return dir;
             }
@@ -220,14 +293,14 @@ export class Game {
         if (this.gameOver || this.phase !== Phase.SHOOT) return false;
         
         const currentPos = this.units[this.currentPlayer];
-        const targets = this.getShootableTargets(currentPos.r, currentPos.c);
+        const targets = this.getShootableTargets(currentPos.r, currentPos.c, this.currentPlayer);
         
         // Check if target is valid
         const isValid = targets.some(t => t.r === targetR && t.c === targetC);
         if (!isValid) return false;
         
         // Find the direction to shoot
-        const dirStr = this.findDirectionToTarget(currentPos, { r: targetR, c: targetC });
+        const dirStr = this.findDirectionToTarget(currentPos, { r: targetR, c: targetC }, this.currentPlayer);
         
         if (dirStr) {
             this.shoot(dirStr);
@@ -252,6 +325,18 @@ export class Game {
 
             // Check for Unit Hit
             if (cell?.hasUnit()) {
+                // Check if target is invincible (Heavy Guardian)
+                const targetPlayer = cell.unit;
+                const targetStats = getCharacterStats(this.characters[targetPlayer!]);
+                
+                if (targetStats.isInvincible) {
+                    // Target is invincible, shot does not kill them
+                    // Just end the turn
+                    this.endTurn();
+                    return { path, destroyed: { r: currR, c: currC } };
+                }
+                
+                // Target is not invincible, normal kill logic
                 this.gameOver = true;
                 // If I hit opponent, I win. If I hit myself, I lose (opponent wins).
                 if (cell.unit === this.currentPlayer) {
@@ -290,7 +375,6 @@ export class Game {
             this.winner = this.currentPlayer === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
         }
     }
-
     canMove(player: PlayerId): boolean {
         const unit = this.units[player];
         for (let r = unit.r - 1; r <= unit.r + 1; r++) {
@@ -299,6 +383,40 @@ export class Game {
             }
         }
         return false;
+    }
+
+    // Check if player has any valid moves (used for Swift Shadow double move)
+    hasAnyValidMoves(player: PlayerId): boolean {
+        const unit = this.units[player];
+        const stats = getCharacterStats(this.characters[player]);
+        
+        // Check all cells within move range
+        for (let r = unit.r - stats.moveRange; r <= unit.r + stats.moveRange; r++) {
+            for (let c = unit.c - stats.moveRange; c <= unit.c + stats.moveRange; c++) {
+                if (this.isValidMove(player, r, c)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Check if player has any valid shots
+    hasAnyValidShots(player: PlayerId): boolean {
+        const unit = this.units[player];
+        const targets = this.getShootableTargets(unit.r, unit.c, player);
+        return targets.length > 0;
+    }
+
+    // Check if SHOOT phase has valid shots, if not, advance turn
+    checkAndAdvancePhase(): void {
+        this.phase = Phase.SHOOT;
+        
+        // Check if there are any valid shots
+        if (!this.hasAnyValidShots(this.currentPlayer)) {
+            // No valid shots, skip to next turn
+            this.endTurn();
+        }
     }
 
     private parseDir(dir: string): { dr: number, dc: number } {

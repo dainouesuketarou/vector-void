@@ -3,7 +3,12 @@
   import BoardComponent from "./Board.svelte";
   import GameOver from "./GameOver.svelte";
   import { Game } from "../lib/game/Game";
-  import { CellType, Phase, type MapConfig } from "../lib/game/types";
+  import {
+    CellType,
+    Phase,
+    type MapConfig,
+    CharacterType,
+  } from "../lib/game/types";
   import { network } from "../lib/network";
 
   export let mapConfig: MapConfig;
@@ -12,6 +17,8 @@
   export let myPlayerId: number = 1;
   export let secretWord: string = "";
   export let seed: number = Date.now();
+  export let p1Character: CharacterType = CharacterType.VOID_DRIFTER;
+  export let p2Character: CharacterType = CharacterType.VOID_DRIFTER;
 
   let game: Game;
   let version = 0; // To force re-render
@@ -67,7 +74,7 @@
         socket.on("game_reset", ({ seed: newSeed }) => {
           // Received reset from server
           console.log("Received game_reset with seed:", newSeed);
-          game = new Game(mapConfig, newSeed);
+          game = new Game(mapConfig, p1Character, p2Character, newSeed);
           destroyedPos = null;
           resetTimer();
           updateStatus();
@@ -101,7 +108,7 @@
             seed
           );
           waitingForRematch = false;
-          game = new Game(mapConfig, seed);
+          game = new Game(mapConfig, p1Character, p2Character, seed);
           version++;
           game = game; // Force reactivity
           resetTimer();
@@ -142,9 +149,9 @@
     // For offline mode or initial game creation
     if (game) {
       const newSeed = Math.floor(Math.random() * 1000000);
-      game = new Game(mapConfig, newSeed);
+      game = new Game(mapConfig, p1Character, p2Character, newSeed);
     } else {
-      game = new Game(mapConfig, seed);
+      game = new Game(mapConfig, p1Character, p2Character, seed);
     }
 
     destroyedPos = null;

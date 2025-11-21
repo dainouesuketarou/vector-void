@@ -11,6 +11,8 @@ export enum PlayerId {
     P2 = 2
 }
 
+export { CharacterType } from './Character';
+
 export enum Phase {
     MOVE = 'move',
     SHOOT = 'shoot'
