@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
   import { CellType, type MapConfig } from "../lib/game/types";
   import { network } from "../lib/network";
 
@@ -64,12 +64,26 @@
     if (isOnline) {
       const socket = network.getSocket();
       if (socket) {
+        console.log("StageSelect: Registering stage_selected listener");
+        // Remove any existing listeners to avoid duplicates
+        socket.off("stage_selected");
         socket.on("stage_selected", ({ mapId, seed }) => {
+          console.log("StageSelect: Received stage_selected", { mapId, seed });
           const map = MAPS.find((m) => m.id === mapId);
           if (map) {
             dispatch("select", { map, seed });
           }
         });
+      }
+    }
+  });
+
+  onDestroy(() => {
+    if (isOnline) {
+      const socket = network.getSocket();
+      if (socket) {
+        console.log("StageSelect: Cleaning up stage_selected listener");
+        socket.off("stage_selected");
       }
     }
   });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
   import { CharacterType, CHARACTERS } from "../lib/game/Character";
   import { network } from "../lib/network";
 
@@ -18,10 +18,27 @@
     if (isOnline) {
       const socket = network.getSocket();
       if (socket) {
+        console.log("CharacterSelect: Registering game_start listener");
+        // Remove any existing listeners to avoid duplicates
+        socket.off("game_start");
         socket.on("game_start", ({ p1Character, p2Character, mapId, seed }) => {
+          console.log("CharacterSelect: Received game_start", {
+            p1Character,
+            p2Character,
+          });
           // Dispatch to App.svelte with both characters
           dispatch("gameStart", { p1Character, p2Character });
         });
+      }
+    }
+  });
+
+  onDestroy(() => {
+    if (isOnline) {
+      const socket = network.getSocket();
+      if (socket) {
+        console.log("CharacterSelect: Cleaning up game_start listener");
+        socket.off("game_start");
       }
     }
   });
