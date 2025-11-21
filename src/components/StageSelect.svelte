@@ -64,7 +64,7 @@
     if (isOnline) {
       const socket = network.getSocket();
       if (socket) {
-        socket.on("game_start", ({ mapId, seed }) => {
+        socket.on("stage_selected", ({ mapId, seed }) => {
           const map = MAPS.find((m) => m.id === mapId);
           if (map) {
             dispatch("select", { map, seed });

@@ -73,7 +73,8 @@ io.on('connection', (socket) => {
             };
 
             console.log(`Room ${word} starting with map ${finalMapId} and seed ${seed}`);
-            io.to(word).emit('game_start', { mapId: finalMapId, seed });
+            // Emit stage_selected instead of game_start to avoid conflict with character selection
+            io.to(word).emit('stage_selected', { mapId: finalMapId, seed });
         } else {
             socket.emit('waiting_for_opponent');
         }

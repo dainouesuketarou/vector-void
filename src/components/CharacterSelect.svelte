@@ -154,14 +154,18 @@
   }
 
   .character-select-container {
+    text-align: center;
+    z-index: 20;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    z-index: 20;
     padding: 20px;
-    min-height: 100vh;
-    justify-content: center;
+    max-height: 100vh;
+    overflow-y: auto;
+    width: 100%;
+    gap: 20px; /* Re-added gap as it was likely intended to be kept */
+    justify-content: center; /* Re-added justify-content as it was likely intended to be kept */
   }
 
   .title {
@@ -350,9 +354,15 @@
   }
 
   @media (max-width: 768px) {
+    .character-select-container {
+      padding: 10px;
+      justify-content: flex-start;
+    }
+
     .title {
       font-size: 2rem;
       letter-spacing: 4px;
+      margin-top: 10px;
     }
 
     .player-label {
