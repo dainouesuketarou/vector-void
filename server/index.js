@@ -22,7 +22,11 @@ io.on('connection', (socket) => {
 
         // Join or create room
         if (!rooms[word]) {
-            rooms[word] = { players: [], votes: {} };
+            rooms[word] = { 
+                players: [], 
+                votes: {},
+                playerRoles: {} // Map socket.id to role (1 or 2)
+            };
         }
 
         const room = rooms[word];
@@ -37,6 +41,7 @@ io.on('connection', (socket) => {
 
         // Assign role
         const role = room.players.length === 1 ? 1 : 2; // 1 = P1, 2 = P2
+        room.playerRoles[socket.id] = role; // Store role mapping
         socket.emit('player_joined', { role });
 
         console.log(`User ${socket.id} joined room ${word} as Player ${role}`);
@@ -58,6 +63,12 @@ io.on('connection', (socket) => {
             // Randomly pick one
             const finalMapId = votes[Math.floor(Math.random() * votes.length)];
             const seed = Math.floor(Math.random() * 1000000);
+            room.seed = seed; // Store seed in room
+            room.rematchState = { // Initialize rematch state
+                player1Ready: false,
+                player2Ready: false,
+                processing: false
+            };
 
             console.log(`Room ${word} starting with map ${finalMapId} and seed ${seed}`);
             io.to(word).emit('game_start', { mapId: finalMapId, seed });
@@ -80,8 +91,103 @@ io.on('connection', (socket) => {
     
     console.log(`Room ${word} resetting with new seed ${newSeed}`);
     
+    // Reset rematch state as well
+    if (room.rematchState) {
+      room.rematchState = {
+        player1Ready: false,
+        player2Ready: false,
+        processing:false
+      };
+    }
+    
     // Broadcast reset to both players
     io.to(word).emit('game_reset', { seed: newSeed });
+  });
+
+  // Rematch request handler
+  socket.on('rematch_request', ({ word }) => {
+    const room = rooms[word];
+    if (!room || !room.rematchState) return;
+
+    // Prevent race conditions with processing lock
+    if (room.rematchState.processing) {
+      console.log(`Room ${word} already processing rematch`);
+      return;
+    }
+
+    room.rematchState.processing = true;
+
+    // Get the role of this player (1 or 2)
+    const playerRole = room.playerRoles[socket.id];
+    if (!playerRole) {
+      console.log(`Room ${word} - Player role not found for ${socket.id}`);
+      room.rematchState.processing = false;
+      return;
+    }
+
+    // Mark player as ready based on their role
+    if (playerRole === 1) {
+      room.rematchState.player1Ready = true;
+    } else {
+      room.rematchState.player2Ready = true;
+    }
+
+    console.log(`Room ${word} - Player ${playerRole} ready for rematch (${socket.id})`);
+
+    // Check if both players are ready
+    if (room.rematchState.player1Ready && room.rematchState.player2Ready) {
+      // Both ready - start new game
+      const newSeed = Math.floor(Math.random() * 1000000);
+      console.log(`Room ${word} - Both players ready, starting rematch with seed ${newSeed}`);
+      
+      // Reset rematch state
+      room.rematchState = {
+        player1Ready: false,
+        player2Ready: false,
+        processing: false
+      };
+
+      // Broadcast rematch start
+      io.to(word).emit('rematch_start', { seed: newSeed });
+    } else {
+      // Still waiting for other player - only send to requesting player
+      socket.emit('rematch_waiting', {
+        player1Ready: room.rematchState.player1Ready,
+        player2Ready: room.rematchState.player2Ready
+      });
+      
+      // Notify the OTHER player that opponent is waiting
+      // Find the other player's socket ID
+      const otherSocketId = room.players.find(id => id !== socket.id);
+      if (otherSocketId) {
+        io.to(otherSocketId).emit('opponent_waiting_rematch', {
+          player1Ready: room.rematchState.player1Ready,
+          player2Ready: room.rematchState.player2Ready
+        });
+      }
+      
+      room.rematchState.processing = false;
+    }
+  });
+
+  // Menu request handler (cancels rematch)
+  socket.on('menu_request', ({ word }) => {
+    const room = rooms[word];
+    if (!room) return;
+
+    console.log(`Room ${word} - Player requesting menu, cancelling rematch`);
+
+    // Reset rematch state
+    if (room.rematchState) {
+      room.rematchState = {
+        player1Ready: false,
+        player2Ready: false,
+        processing: false
+      };
+    }
+
+    // Notify all players that rematch was cancelled
+    io.to(word).emit('rematch_cancelled');
   });
 
     socket.on('disconnect', () => {
@@ -90,6 +196,10 @@ io.on('connection', (socket) => {
         for (const word in rooms) {
             const room = rooms[word];
             if (room.players.includes(socket.id)) {
+                // Cancel any pending rematch
+                if (room.rematchState) {
+                    io.to(word).emit('rematch_cancelled');
+                }
                 io.to(word).emit('opponent_disconnected');
                 delete rooms[word];
                 break;

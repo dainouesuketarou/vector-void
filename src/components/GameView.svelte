@@ -19,6 +19,17 @@
   let destroyedPos: { r: number; c: number } | null = null;
   let timeLeft = 30;
   let timerInterval: any;
+  let waitingForRematch = false; // Track rematch waiting state
+
+  // Debug logging for reset button visibility
+  $: if (game) {
+    console.log(
+      "[RESET DEBUG] game.gameOver:",
+      game.gameOver,
+      "version:",
+      version
+    );
+  }
 
   onMount(() => {
     startNewGame();
@@ -48,6 +59,7 @@
           }
           updateStatus();
           version++;
+          game = game; // Force Svelte to detect game.gameOver change
         });
 
         socket.on("game_reset", ({ seed: newSeed }) => {
@@ -64,6 +76,42 @@
           alert("対戦相手との接続が切断されました。メニューに戻ります。");
           onBack();
         });
+
+        // Rematch event listeners
+        socket.on("rematch_waiting", (data) => {
+          console.log("[REMATCH] I am waiting for opponent:", data);
+          waitingForRematch = true;
+        });
+
+        socket.on("opponent_waiting_rematch", (data) => {
+          console.log(
+            "[REMATCH] Opponent is waiting for rematch, I can still choose:",
+            data
+          );
+          // IMPORTANT: Don't set waitingForRematch to true - let this player still choose
+          waitingForRematch = false; // Explicitly set to false to be safe
+          statusMsg = "相手がリマッチを希望しています";
+        });
+
+        socket.on("rematch_start", ({ seed }) => {
+          console.log(
+            "[REMATCH] Both players ready, starting with seed:",
+            seed
+          );
+          waitingForRematch = false;
+          game = new Game(mapConfig, seed);
+          version++;
+          game = game; // Force reactivity
+          resetTimer();
+          updateStatus();
+        });
+
+        socket.on("rematch_cancelled", () => {
+          console.log("[REMATCH] Rematch cancelled, returning to menu");
+          waitingForRematch = false;
+          alert("相手がメニューに戻りました。");
+          onBack();
+        });
       }
     }
   });
@@ -74,6 +122,10 @@
       const socket = network.getSocket();
       socket?.off("action");
       socket?.off("opponent_disconnected");
+      socket?.off("rematch_waiting");
+      socket?.off("opponent_waiting_rematch");
+      socket?.off("rematch_start");
+      socket?.off("rematch_cancelled");
     }
   });
 
@@ -190,6 +242,7 @@
     if (actionTaken) {
       updateStatus();
       version++;
+      game = game; // Force Svelte to detect game.gameOver change
       console.log("[DEBUG] Action taken, version incremented to:", version);
       resetTimer(); // Reset timer after my action
     }
@@ -215,6 +268,27 @@
       const phaseText = game.phase === Phase.MOVE ? "移動" : "攻撃";
       const color = game.currentPlayer === 1 ? "シアン" : "マゼンタ";
       statusMsg = `プレイヤー ${game.currentPlayer} (${color}) - ${phaseText}フェーズ`;
+    }
+  }
+
+  function handleRematchRequest() {
+    if (isOnline) {
+      // Send rematch request to server
+      network.getSocket()?.emit("rematch_request", { word: secretWord });
+    } else {
+      // Offline mode - just restart immediately
+      startNewGame();
+    }
+  }
+
+  function handleMenuRequest() {
+    if (isOnline) {
+      // Send menu request to server (cancels rematch)
+      network.getSocket()?.emit("menu_request", { word: secretWord });
+      // Wait for server response before going back
+    } else {
+      // Offline mode - just go back immediately
+      onBack();
     }
   }
 
@@ -393,14 +467,19 @@
         winner={game.winner}
         winnerColor={getWinnerColor()}
         {myPlayerId}
-        on:restart={startNewGame}
-        on:menu={onBack}
+        {isOnline}
+        {waitingForRematch}
+        on:restart={handleRematchRequest}
+        on:menu={handleMenuRequest}
       />
     {/if}
 
     <div class="controls">
+      <!-- Debug: game exists: {game ? 'YES' : 'NO'}, gameOver: {game?.gameOver ? 'YES' : 'NO'} -->
       {#if game.gameOver}
         <button class="cyber-btn" on:click={startNewGame}>リセット</button>
+      {:else}
+        <!-- Debug: Reset button hidden because game.gameOver is false -->
       {/if}
       <button class="cyber-btn" on:click={onBack}>メニュー</button>
     </div>

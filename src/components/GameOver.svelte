@@ -5,6 +5,8 @@
   export let winner: PlayerId | null;
   export let winnerColor: string;
   export let myPlayerId: number = 1; // Add myPlayerId to know if this player won
+  export let isOnline: boolean = false; // Add to know if in online mode
+  export let waitingForRematch: boolean = false; // Add to show waiting state
 
   const dispatch = createEventDispatcher();
   let canvas: HTMLCanvasElement;
@@ -128,11 +130,24 @@
       {isVictory ? "VICTORY!" : "DEFEAT"}
     </h1>
 
+    {#if waitingForRematch}
+      <div class="waiting-message">
+        <div class="spinner"></div>
+        <p>WAITING FOR OPPONENT...</p>
+      </div>
+    {/if}
+
     <div class="buttons">
-      <button class="cyber-btn large" on:click={() => dispatch("restart")}
-        >REMATCH</button
+      <button
+        class="cyber-btn large"
+        on:click={() => dispatch("restart")}
+        disabled={waitingForRematch}
       >
-      <button class="cyber-btn" on:click={() => dispatch("menu")}>MENU</button>
+        REMATCH
+      </button>
+      <button class="cyber-btn" on:click={() => dispatch("menu")}>
+        MENU
+      </button>
     </div>
   </div>
 </div>
@@ -143,7 +158,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: calc(100% - 80px); /* Leave room for controls at bottom */
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(5px);
     z-index: 100;
@@ -267,6 +282,48 @@
 
   .defeat-badge {
     opacity: 0.7;
+  }
+
+  .waiting-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .waiting-message p {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: #ffd700;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px #ffd700;
+  }
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 215, 0, 0.3);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   .buttons {
