@@ -60,6 +60,20 @@ export class Board {
         }
     }
 
+    regenerateTeleporters(): void {
+        // Clear existing teleporters
+        for (let r = 0; r < this.size; r++) {
+            for (let c = 0; c < this.size; c++) {
+                if (this.grid[r][c].type === CellType.TELEPORT) {
+                    this.grid[r][c].type = CellType.EMPTY;
+                    this.grid[r][c].teleportId = null;
+                }
+            }
+        }
+        // Generate new ones
+        this.generateTeleporters();
+    }
+
     getCell(r: number, c: number): Cell | null {
         if (r < 0 || r >= this.size || c < 0 || c >= this.size) return null;
         return this.grid[r][c];

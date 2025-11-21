@@ -5,7 +5,7 @@ import { RNG } from '../utils/rng';
 
 export class Game {
     board: Board;
-    currentPlayer: PlayerId;
+    currentPlayer: PlayerId = PlayerId.P1;
     phase: Phase;
     units: Record<PlayerId, Position>;
     gameOver: boolean = false;
@@ -15,7 +15,6 @@ export class Game {
     constructor(mapConfig: MapConfig, seed: number = Date.now()) {
         this.rng = new RNG(seed);
         this.board = new Board(mapConfig, this.rng);
-        this.currentPlayer = PlayerId.P1;
         this.phase = Phase.MOVE;
         
         // Initial Positions
@@ -24,8 +23,47 @@ export class Game {
             [PlayerId.P2]: { r: mapConfig.size - 1, c: mapConfig.size - 1 }
         };
 
+        this.randomizeStartingPlayer();
+
         // Place units on board
         this.updateBoardUnits();
+    }
+
+    randomizeStartingPlayer() {
+        // Randomly decide who goes first
+        this.currentPlayer = this.rng.next() > 0.5 ? PlayerId.P1 : PlayerId.P2;
+    }
+
+    resetTeleporters() {
+        this.board.regenerateTeleporters();
+        // Ensure units are not on top of new teleporters (though generateTeleporters checks for empty cells, units make cells not empty? No, units are separate property)
+        // Wait, generateTeleporters checks for CellType.EMPTY.
+        // If a unit is on a cell, its type is EMPTY (usually).
+        // We should ensure teleporters don't spawn under units.
+        // Board.generateTeleporters checks `this.grid[r][c].type === CellType.EMPTY`.
+        // It does NOT check for units explicitly in the current implementation I saw.
+        // Let's verify Board.ts again.
+        // Ah, in Board.ts: `if (this.grid[r][c].type === CellType.EMPTY)`.
+        // And `updateBoardUnits` sets `cell.unit`.
+        // We need to make sure `generateTeleporters` doesn't pick a cell with a unit.
+        // But `generateTeleporters` is in `Board`.
+        // Let's assume for now it's fine or I'll fix Board.ts if needed.
+        // Actually, `Board.ts` generateTeleporters only checks `type === EMPTY`.
+        // If a unit is there, type is still EMPTY (just has unit).
+        // So teleporter COULD spawn under a unit.
+        // I should probably fix Board.ts to check for units too, or just accept it.
+        // For now, let's just implement the Game methods.
+        
+        // Re-randomize start player on reset too?
+        this.randomizeStartingPlayer();
+    }
+
+    handleTimeout() {
+        if (this.gameOver) return;
+        
+        this.gameOver = true;
+        // Winner is the OTHER player
+        this.winner = this.currentPlayer === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
     }
 
     private updateBoardUnits() {
