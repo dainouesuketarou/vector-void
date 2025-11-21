@@ -1,20 +1,47 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import { CharacterType, CHARACTERS } from "../lib/game/Character";
+  import { network } from "../lib/network";
 
   export let playerId: number = 1;
   export let playerLabel: string = "Player 1";
+  export let isOnline: boolean = false;
+  export let secretWord: string = "";
+  export let myPlayerId: number = 1;
 
   const dispatch = createEventDispatcher();
 
   let selectedCharacter: CharacterType = CharacterType.VOID_DRIFTER;
+  let waitingForOpponent = false;
+
+  onMount(() => {
+    if (isOnline) {
+      const socket = network.getSocket();
+      if (socket) {
+        socket.on("game_start", ({ p1Character, p2Character, mapId, seed }) => {
+          // Dispatch to App.svelte with both characters
+          dispatch("gameStart", { p1Character, p2Character });
+        });
+      }
+    }
+  });
 
   function selectCharacter(type: CharacterType) {
     selectedCharacter = type;
   }
 
   function confirmSelection() {
-    dispatch("select", { character: selectedCharacter });
+    if (isOnline) {
+      waitingForOpponent = true;
+      const socket = network.getSocket();
+      socket?.emit("character_vote", {
+        word: secretWord,
+        character: selectedCharacter,
+        playerId: myPlayerId,
+      });
+    } else {
+      dispatch("select", { character: selectedCharacter });
+    }
   }
 
   function goBack() {
@@ -79,6 +106,13 @@
       決定
     </button>
   </div>
+
+  {#if waitingForOpponent}
+    <div class="waiting-overlay">
+      <p>対戦相手の選択を待っています...</p>
+      <div class="loader"></div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -352,6 +386,38 @@
     .character-visual {
       width: 50px;
       height: 50px;
+    }
+  }
+
+  .waiting-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    color: #fff;
+    font-size: 1.5rem;
+  }
+
+  .loader {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-left-color: var(--p1-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-top: 20px;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 </style>

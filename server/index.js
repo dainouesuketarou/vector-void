@@ -25,6 +25,7 @@ io.on('connection', (socket) => {
             rooms[word] = { 
                 players: [], 
                 votes: {},
+                characterVotes: {}, // Store character selections
                 playerRoles: {} // Map socket.id to role (1 or 2)
             };
         }
@@ -64,6 +65,7 @@ io.on('connection', (socket) => {
             const finalMapId = votes[Math.floor(Math.random() * votes.length)];
             const seed = Math.floor(Math.random() * 1000000);
             room.seed = seed; // Store seed in room
+            room.mapId = finalMapId; // Store map ID
             room.rematchState = { // Initialize rematch state
                 player1Ready: false,
                 player2Ready: false,
@@ -72,6 +74,46 @@ io.on('connection', (socket) => {
 
             console.log(`Room ${word} starting with map ${finalMapId} and seed ${seed}`);
             io.to(word).emit('game_start', { mapId: finalMapId, seed });
+        } else {
+            socket.emit('waiting_for_opponent');
+        }
+    });
+
+    socket.on('character_vote', ({ word, character, playerId }) => {
+        const room = rooms[word];
+        if (!room) return;
+
+        // Store character selection by player role
+        room.characterVotes[socket.id] = { character, playerId };
+
+        console.log(`Room ${word} - Player ${playerId} selected ${character}`);
+
+        // If both players have selected characters
+        if (Object.keys(room.characterVotes).length === 2) {
+            // Extract characters based on player roles
+            let p1Character, p2Character;
+            
+            for (const socketId in room.characterVotes) {
+                const vote = room.characterVotes[socketId];
+                if (vote.playerId === 1) {
+                    p1Character = vote.character;
+                } else {
+                    p2Character = vote.character;
+                }
+            }
+
+            console.log(`Room ${word} both characters selected - P1: ${p1Character}, P2: ${p2Character}`);
+            
+            // Emit game_start with all necessary data
+            io.to(word).emit('game_start', { 
+                mapId: room.mapId, 
+                seed: room.seed,
+                p1Character,
+                p2Character
+            });
+
+            // Clear character votes for potential rematch
+            room.characterVotes = {};
         } else {
             socket.emit('waiting_for_opponent');
         }

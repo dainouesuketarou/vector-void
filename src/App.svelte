@@ -11,8 +11,9 @@
   let appState:
     | "menu"
     | "stage_select"
-    | "character_select_p1"
-    | "character_select_p2"
+    | "character_select" // Online: both players see this
+    | "character_select_p1" // Offline only
+    | "character_select_p2" // Offline only
     | "game" = "menu";
   let currentMap: MapConfig | null = null;
   let isOnline = false;
@@ -42,8 +43,14 @@
   function handleStageSelect(e: CustomEvent) {
     currentMap = e.detail.map;
     seed = e.detail.seed;
-    // Go to character select for P1 first
-    appState = "character_select_p1";
+
+    if (isOnline) {
+      // Online: go directly to character select (both players)
+      appState = "character_select";
+    } else {
+      // Offline: go to P1 select first
+      appState = "character_select_p1";
+    }
   }
 
   function handleP1CharacterSelect(e: CustomEvent) {
@@ -76,6 +83,13 @@
     p2Character = CharacterType.VOID_DRIFTER;
   }
 
+  function handleGameStart(e: CustomEvent) {
+    // Online mode: server sends both characters
+    p1Character = e.detail.p1Character;
+    p2Character = e.detail.p2Character;
+    appState = "game";
+  }
+
   function handleBack() {
     appState = "menu";
     currentMap = null;
@@ -95,6 +109,16 @@
       {secretWord}
       on:select={handleStageSelect}
       onBack={handleBack}
+    />
+  {:else if appState === "character_select"}
+    <CharacterSelect
+      playerId={myPlayerId}
+      playerLabel={`Player ${myPlayerId}`}
+      {isOnline}
+      {secretWord}
+      {myPlayerId}
+      on:gameStart={handleGameStart}
+      on:back={handleCharacterSelectBack}
     />
   {:else if appState === "character_select_p1"}
     <CharacterSelect
