@@ -1,0 +1,96 @@
+:root {
+    --bg-color: #050505;
+    --grid-color: #1a1a1a;
+    --p1-color: #00f3ff; /* Cyan */
+    --p1-glow: rgba(0, 243, 255, 0.6);
+    --p2-color: #ff00ff; /* Magenta */
+    --p2-glow: rgba(255, 0, 255, 0.6);
+    --highlight-color: #ffe600;
+    --highlight-glow: rgba(255, 230, 0, 0.5);
+    --void-color: #000000;
+    --laser-color: #ff3333;
+    --teleport-color: #00ff9d;
+    --text-color: #e0e0e0;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Rajdhani', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-body);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0,0,0,0.2) 50%,
+        rgba(0,0,0,0.2)
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.6;
+}
+
+.cyber-btn {
+    background: transparent;
+    border: 1px solid var(--p1-color);
+    color: var(--p1-color);
+    padding: 10px 20px;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.cyber-btn:hover {
+    background: var(--p1-glow);
+    color: #000;
+    box-shadow: 0 0 15px var(--p1-glow);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .cyber-btn {
+        padding: 12px 24px;
+        font-size: 0.95rem;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) {
+    .cyber-btn:hover {
+        background: transparent;
+        color: var(--p1-color);
+        box-shadow: none;
+    }
+}
