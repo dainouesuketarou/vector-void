@@ -5,54 +5,56 @@
 
   export let isOnline: boolean = false;
   export let secretWord: string = "";
+  export let onBack: () => void;
 
   const dispatch = createEventDispatcher();
   let waitingForOpponent = false;
 
   const MAPS: MapConfig[] = [
     {
-      id: "crossfire",
-      name: "CROSSFIRE (5x5)",
-      description: "バランスの取れた戦術マップ",
+      id: "classic",
+      name: "CLASSIC (5x5)",
+      description: "スタンダードな戦場。中央の穴に注意せよ。",
       size: 5,
       layout: [
         [0, 0, 0, 0, 0],
-        [0, 0, 3, 0, 0],
-        [0, 2, 0, 2, 0],
-        [0, 0, 3, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 1, 0, 1, 0],
+        [0, 0, 1, 0, 0],
         [0, 0, 0, 0, 0],
       ].map((r) => r.map((c) => c as CellType)),
     },
     {
-      id: "arena_7",
-      name: "NEON ARENA (7x7)",
-      description: "広大なフィールドと鏡の迷宮",
+      id: "duel",
+      name: "DUEL (7x7)",
+      description: "広大なエリアでの駆け引き。障害物を利用して射線を切れ。",
       size: 7,
-      layout: Array(7)
-        .fill(0)
-        .map((_, r) =>
-          Array(7)
-            .fill(0)
-            .map((_, c) => {
-              if (r === 3 && c === 3) return CellType.HOLE;
-              if ((r === 2 || r === 4) && (c === 2 || c === 4))
-                return CellType.MIRROR_0;
-              return CellType.EMPTY;
-            })
-        ),
+      layout: [
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 1, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 1, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+      ].map((r) => r.map((c) => c as CellType)),
     },
     {
-      id: "void_9",
-      name: "DEEP VOID (9x9)",
-      description: "極限のサバイバル",
+      id: "void",
+      name: "VOID (9x9)",
+      description: "多くの穴が存在する危険地帯。足元に気をつけろ。",
       size: 9,
-      layout: Array(9)
-        .fill(0)
-        .map((_, r) =>
-          Array(9)
-            .fill(0)
-            .map((_, c) => CellType.EMPTY)
-        ),
+      layout: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 1, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 1, 0, 1, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 1, 0, 1, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 1, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ].map((r) => r.map((c) => c as CellType)),
     },
   ];
 
@@ -126,6 +128,8 @@
       </div>
     {/each}
   </div>
+
+  <button class="cyber-btn back-btn" on:click={onBack}>戻る</button>
 
   {#if waitingForOpponent}
     <div class="waiting-overlay">
@@ -325,6 +329,10 @@
       width: 60vmin;
       height: 60vmin;
     }
+  }
+
+  .back-btn {
+    margin-top: 40px;
   }
 
   .waiting-overlay {

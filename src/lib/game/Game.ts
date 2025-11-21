@@ -113,18 +113,8 @@ export class Game {
             const cell = this.board.getCell(currR, currC);
             if (!cell) return false; 
 
-            if (cell.hasUnit()) return false;
+            if (cell.hasUnit()) return true; // Valid to shoot units now
             if (cell.isHole()) return false;
-
-            if (cell.type === CellType.MIRROR_0) { 
-                const temp = dr; dr = -dc; dc = -temp;
-                currR += dr; currC += dc;
-                continue;
-            } else if (cell.type === CellType.MIRROR_1) { 
-                const temp = dr; dr = dc; dc = temp;
-                currR += dr; currC += dc;
-                continue;
-            }
 
             if (cell.isTeleport()) return true;
             if (cell.type === CellType.EMPTY) return true;
@@ -161,19 +151,8 @@ export class Game {
             const cell = this.board.getCell(currR, currC);
             if (!cell) return null;
             
-            if (cell.hasUnit()) return null;
+            if (cell.hasUnit()) return { r: currR, c: currC }; // Unit is a target
             if (cell.isHole()) return null;
-
-            // Handle mirrors
-            if (cell.type === CellType.MIRROR_0) {
-                const temp = dr; dr = -dc; dc = -temp;
-                currR += dr; currC += dc;
-                continue;
-            } else if (cell.type === CellType.MIRROR_1) {
-                const temp = dr; dr = dc; dc = temp;
-                currR += dr; currC += dc;
-                continue;
-            }
 
             // Return landing position
             if (cell.isTeleport() || cell.type === CellType.EMPTY) {
@@ -232,15 +211,17 @@ export class Game {
         while (true) {
             path.push({ r: currR, c: currC });
             const cell = this.board.getCell(currR, currC);
-            
-            if (cell?.type === CellType.MIRROR_0) {
-                const temp = dr; dr = -dc; dc = -temp;
-                currR += dr; currC += dc;
-                continue;
-            } else if (cell?.type === CellType.MIRROR_1) {
-                const temp = dr; dr = dc; dc = temp;
-                currR += dr; currC += dc;
-                continue;
+
+            // Check for Unit Hit
+            if (cell?.hasUnit()) {
+                this.gameOver = true;
+                // If I hit opponent, I win. If I hit myself, I lose (opponent wins).
+                if (cell.unit === this.currentPlayer) {
+                    this.winner = this.currentPlayer === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
+                } else {
+                    this.winner = this.currentPlayer;
+                }
+                return { path, destroyed: { r: currR, c: currC } };
             }
 
             if (cell?.type === CellType.EMPTY || cell?.type === CellType.TELEPORT) {

@@ -6,6 +6,7 @@
 
   export let game: Game;
   export let version: number;
+  export let destroyedPos: { r: number; c: number } | null = null;
 
   const dispatch = createEventDispatcher();
 
@@ -53,12 +54,6 @@
     return game.isValidMove(game.currentPlayer, r, c);
   }
 
-  function checkArrows(r: number, c: number, v: number): boolean {
-    if (game.phase !== Phase.SHOOT) return false;
-    const unit = game.units[game.currentPlayer];
-    return unit.r === r && unit.c === c;
-  }
-
   // Calculate shootable targets for SHOOT phase
   $: shootableTargets = (() => {
     if (game.phase !== Phase.SHOOT || version < 0) return [];
@@ -71,14 +66,17 @@
     return shootableTargets.some((t) => t.r === r && t.c === c);
   }
 
-  // New: Get valid shot directions for the current player
-  function getValidDirs(r: number, c: number, v: number): string[] {
-    if (game.phase !== Phase.SHOOT) return [];
-    const unit = game.units[game.currentPlayer];
-    if (unit.r === r && unit.c === c) {
-      return game.getValidShotDirs(r, c);
-    }
-    return [];
+  function getTeleportPairId(cell: any): number | null {
+    if (!cell.isTeleport() || cell.teleportId === null) return null;
+    return Math.floor(cell.teleportId / 2);
+  }
+
+  function checkDestroyed(
+    r: number,
+    c: number,
+    dPos: { r: number; c: number } | null
+  ): boolean {
+    return !!dPos && dPos.r === r && dPos.c === c;
   }
 </script>
 
@@ -97,10 +95,9 @@
         {c}
         isValidMove={checkMove(r, c, version)}
         isShootableTarget={isShootableTarget(r, c, version)}
-        showArrows={checkArrows(r, c, version)}
-        validShotDirs={getValidDirs(r, c, version)}
+        teleportPairId={getTeleportPairId(cell)}
+        isDestroyed={checkDestroyed(r, c, destroyedPos)}
         on:click
-        on:shoot
       />
     {/each}
   {/each}

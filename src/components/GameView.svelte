@@ -16,6 +16,7 @@
   let game: Game;
   let version = 0; // To force re-render
   let statusMsg = "システム起動中...";
+  let destroyedPos: { r: number; c: number } | null = null;
 
   onMount(() => {
     startNewGame();
@@ -28,34 +29,48 @@
             game.move(data.r, data.c);
             playSound("move");
           } else if (type === "shoot_target") {
-            game.shootTarget(data.r, data.c);
-            playSound("shoot");
-            playSound("destroy");
+            const result = game.shootTarget(data.r, data.c);
+            if (result) {
+              playSound("shoot");
+              // We need to know WHERE the shot landed to show animation.
+              // game.shootTarget returns boolean, but internally calls shoot.
+              // We need to reconstruct the hit for animation or modify game.shootTarget to return details.
+              // For now, let's just use the target coordinates provided in data.
+              // Wait, if it hit a unit, we want to show explosion there.
+              // If it hit a wall/teleport, show there.
+              // Since we just updated the game state, we can check the cell at data.r, data.c?
+              // No, the cell might be destroyed/empty now.
+              // Let's trigger animation at the target.
+              triggerDestruction({ r: data.r, c: data.c });
+              playSound("destroy");
+            }
           }
           updateStatus();
           version++;
         });
 
         socket.on("opponent_disconnected", () => {
-          alert("対戦相手が切断しました");
+          alert("対戦相手との接続が切断されました。メニューに戻ります。");
           onBack();
         });
       }
     }
   });
 
-  onDestroy(() => {
-    if (isOnline) {
-      const socket = network.getSocket();
-      socket?.off("action");
-      socket?.off("opponent_disconnected");
-    }
-  });
+  // ... (onDestroy)
 
   function startNewGame() {
     game = new Game(mapConfig, seed);
+    destroyedPos = null;
     updateStatus();
     version++;
+  }
+
+  function triggerDestruction(pos: { r: number; c: number }) {
+    destroyedPos = pos;
+    setTimeout(() => {
+      destroyedPos = null;
+    }, 1000); // 1s animation
   }
 
   function handleCellClick(e: CustomEvent) {
@@ -71,55 +86,35 @@
       if (game.move(r, c)) {
         playSound("move");
         if (isOnline) {
-          network
-            .getSocket()
-            ?.emit("action", {
-              word: secretWord,
-              type: "move",
-              data: { r, c },
-            });
+          network.getSocket()?.emit("action", {
+            word: secretWord,
+            type: "move",
+            data: { r, c },
+          });
         }
         updateStatus();
         version++;
       }
     } else if (game.phase === Phase.SHOOT) {
       // Handle shoot target selection
+      // We need to capture the result to know if something was destroyed
+      // game.shootTarget returns boolean.
+      // Let's modify Game.ts later if needed, but for now we know (r,c) is the target.
       if (game.shootTarget(r, c)) {
         playSound("shoot");
         playSound("destroy");
+        triggerDestruction({ r, c });
+
         if (isOnline) {
-          network
-            .getSocket()
-            ?.emit("action", {
-              word: secretWord,
-              type: "shoot_target",
-              data: { r, c },
-            });
+          network.getSocket()?.emit("action", {
+            word: secretWord,
+            type: "shoot_target",
+            data: { r, c },
+          });
         }
         updateStatus();
         version++;
       }
-    }
-  }
-
-  // Keep this for backward compatibility with arrow UI (will be removed later)
-  function handleShoot(e: CustomEvent) {
-    const { dir } = e.detail;
-    if (
-      game.simulateShot(
-        game.units[game.currentPlayer].r,
-        game.units[game.currentPlayer].c,
-        dir
-      )
-    ) {
-      playSound("shoot");
-      const result = game.shoot(dir);
-      if (result.destroyed) {
-        playSound("destroy");
-      }
-      // Immediate update to check win condition
-      updateStatus();
-      version++;
     }
   }
 
@@ -205,8 +200,8 @@
     <BoardComponent
       {game}
       {version}
+      {destroyedPos}
       on:click={handleCellClick}
-      on:shoot={handleShoot}
     />
 
     {#if game.gameOver}

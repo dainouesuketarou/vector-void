@@ -48,7 +48,12 @@
   {#if appState === "menu"}
     <Menu on:modeSelect={handleModeSelect} />
   {:else if appState === "stage_select"}
-    <StageSelect {isOnline} {secretWord} on:select={handleStageSelect} />
+    <StageSelect
+      {isOnline}
+      {secretWord}
+      on:select={handleStageSelect}
+      onBack={handleBack}
+    />
   {:else if appState === "game" && currentMap}
     <GameView
       mapConfig={currentMap}

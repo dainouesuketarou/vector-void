@@ -56,6 +56,10 @@
   }
 </script>
 
+<div class="bg-layer">
+  <div class="grid-animation"></div>
+</div>
+
 <div class="menu-container">
   <h1 class="title">VECTOR VOID</h1>
 
@@ -94,6 +98,43 @@
 </div>
 
 <style>
+  .bg-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  }
+
+  .grid-animation {
+    width: 200%;
+    height: 200%;
+    background-image: linear-gradient(
+        rgba(0, 255, 255, 0.1) 1px,
+        transparent 1px
+      ),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    transform: perspective(500px) rotateX(60deg);
+    animation: moveGrid 10s linear infinite;
+    opacity: 0.5;
+  }
+
+  @keyframes moveGrid {
+    0% {
+      transform: perspective(500px) rotateX(60deg) translateY(0);
+    }
+    100% {
+      transform: perspective(500px) rotateX(60deg) translateY(50px);
+    }
+  }
+
   .menu-container {
     display: flex;
     flex-direction: column;

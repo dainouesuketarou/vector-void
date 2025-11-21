@@ -27,13 +27,20 @@ export class Board {
     }
 
     private generateTeleporters(): void {
-        // Randomly place 2 teleporters on EMPTY cells
+        // Determine number of teleporters based on map size
+        // 5x5 -> 2 (1 pair)
+        // 7x7 -> 4 (2 pairs)
+        // 9x9 -> 6 (3 pairs)
+        let numTeleporters = 2;
+        if (this.size === 7) numTeleporters = 4;
+        if (this.size === 9) numTeleporters = 6;
+
         let placed = 0;
         this.teleporters = [];
         
         // Safety break
         let attempts = 0;
-        while (placed < 2 && attempts < 100) {
+        while (placed < numTeleporters && attempts < 200) {
             const r = this.rng.range(0, this.size);
             const c = this.rng.range(0, this.size);
             
@@ -60,16 +67,21 @@ export class Board {
 
     getTeleportDestination(fromR: number, fromC: number): Position | null {
         const cell = this.getCell(fromR, fromC);
-        if (!cell || !cell.isTeleport()) return null;
+        if (!cell || !cell.isTeleport() || cell.teleportId === null) return null;
 
-        // Find the *other* teleporter
-        const other = this.teleporters.find(p => p.r !== fromR || p.c !== fromC);
+        // Find partner ID: 0<->1, 2<->3, 4<->5
+        // If even, partner is id+1. If odd, partner is id-1.
+        const partnerId = cell.teleportId % 2 === 0 ? cell.teleportId + 1 : cell.teleportId - 1;
         
-        // Check if the other teleporter still exists (wasn't destroyed)
-        if (other) {
-            const targetCell = this.getCell(other.r, other.c);
-            if (targetCell && targetCell.isTeleport()) {
-                return other;
+        // Find the partner teleporter position
+        // We can look it up directly in the teleporters array if indices match IDs
+        if (this.teleporters[partnerId]) {
+            const dest = this.teleporters[partnerId];
+            const destCell = this.getCell(dest.r, dest.c);
+            
+            // Verify it's still a valid teleporter (wasn't destroyed)
+            if (destCell && destCell.isTeleport() && destCell.teleportId === partnerId) {
+                return dest;
             }
         }
         return null;
