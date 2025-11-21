@@ -399,7 +399,9 @@
   {/if}
 
   <div class="controls">
-    <button class="cyber-btn" on:click={startNewGame}> リセット </button>
+    {#if game.gameOver}
+      <button class="cyber-btn" on:click={startNewGame}>リセット</button>
+    {/if}
     <button class="cyber-btn" on:click={onBack}>メニュー</button>
   </div>
 </div>
