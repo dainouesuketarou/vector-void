@@ -177,7 +177,9 @@ export class Game {
         if (cell.isHole() || cell.isMirror()) return false;
         if (cell.hasUnit()) return false;
 
-        if (!this.canShootFrom(r, c, player)) return false;
+        // If character cannot shoot (shootRange == 0), skip canShootFrom check
+        const stats = getCharacterStats(this.characters[player]);
+        if (stats.shootRange !== 0 && !this.canShootFrom(r, c, player)) return false;
 
         return true;
     }
