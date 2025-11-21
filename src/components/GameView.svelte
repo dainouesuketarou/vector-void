@@ -55,6 +55,8 @@
             // Opponent timed out
             game.handleTimeout();
             updateStatus();
+            version++;
+            game = game; // Force Svelte to detect game.gameOver change
             clearInterval(timerInterval);
           }
           updateStatus();
@@ -166,16 +168,20 @@
   }
 
   function handleTimeout() {
+    if (!game || game.gameOver) return;
+
+    console.log("[TIMEOUT] Player timed out");
     game.handleTimeout();
     updateStatus();
     version++;
+    game = game; // Force Svelte to detect game.gameOver change
+    clearInterval(timerInterval);
 
-    if (isOnline && game.currentPlayer === myPlayerId) {
-      // Notify opponent that I timed out
+    // In online mode, notify opponent
+    if (isOnline) {
       network.getSocket()?.emit("action", {
         word: secretWord,
         type: "time_out",
-        data: {},
       });
     }
   }

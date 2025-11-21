@@ -329,14 +329,140 @@
   .buttons {
     display: flex;
     gap: 20px;
-    margin-top: 20px;
-    animation: slideUp 0.5s ease-out 0.6s both;
+    justify-content: center;
   }
 
-  .cyber-btn.large {
-    font-size: 1.5rem;
-    padding: 15px 40px;
-    border-width: 2px;
+  /* Mobile Responsive Design */
+  @media (max-width: 768px) {
+    .overlay {
+      height: calc(100% - 60px); /* Less space for smaller screens */
+    }
+
+    .card {
+      padding: 30px 20px;
+      max-width: 90%;
+      gap: 15px;
+    }
+
+    .particle-canvas {
+      width: 280px;
+      height: 280px;
+    }
+
+    .trophy,
+    .skull {
+      font-size: 4rem;
+    }
+
+    .badge {
+      padding: 8px 25px;
+      font-size: 1.2rem;
+    }
+
+    .result-text {
+      font-size: 2.5rem;
+    }
+
+    .waiting-message p {
+      font-size: 1.2rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+    }
+
+    .buttons {
+      gap: 15px;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+      font-size: 1rem;
+      padding: 12px 24px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .overlay {
+      height: calc(100% - 50px);
+    }
+
+    .card {
+      padding: 20px 15px;
+      gap: 10px;
+    }
+
+    .particle-canvas {
+      width: 220px;
+      height: 220px;
+    }
+
+    .trophy,
+    .skull {
+      font-size: 3rem;
+    }
+
+    .badge {
+      padding: 6px 20px;
+      font-size: 1rem;
+    }
+
+    .result-text {
+      font-size: 2rem;
+    }
+
+    .waiting-message {
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .waiting-message p {
+      font-size: 1rem;
+      letter-spacing: 2px;
+    }
+
+    .spinner {
+      width: 35px;
+      height: 35px;
+      border-width: 3px;
+    }
+
+    button {
+      font-size: 0.9rem;
+      padding: 10px 20px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .card {
+      padding: 15px 10px;
+    }
+
+    .trophy,
+    .skull {
+      font-size: 2.5rem;
+    }
+
+    .badge {
+      font-size: 0.9rem;
+      padding: 5px 15px;
+    }
+
+    .result-text {
+      font-size: 1.8rem;
+    }
+
+    .waiting-message p {
+      font-size: 0.9rem;
+    }
+
+    button {
+      font-size: 0.85rem;
+      padding: 9px 18px;
+    }
   }
 
   /* Animations */
