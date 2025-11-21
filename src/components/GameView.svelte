@@ -204,6 +204,7 @@
     );
     if (game.gameOver) {
       statusMsg = `ゲーム終了 - プレイヤー ${game.winner} の勝利`;
+      console.log("[DEBUG] Game is over, should show reset button");
       // Play victory or defeat sound based on who won
       if (game.winner === myPlayerId) {
         playSound("victory");
@@ -396,14 +397,14 @@
         on:menu={onBack}
       />
     {/if}
-  {/if}
 
-  <div class="controls">
-    {#if game && game.gameOver}
-      <button class="cyber-btn" on:click={startNewGame}>リセット</button>
-    {/if}
-    <button class="cyber-btn" on:click={onBack}>メニュー</button>
-  </div>
+    <div class="controls">
+      {#if game.gameOver}
+        <button class="cyber-btn" on:click={startNewGame}>リセット</button>
+      {/if}
+      <button class="cyber-btn" on:click={onBack}>メニュー</button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -651,28 +652,147 @@
   /* Responsive Design */
   @media (max-width: 768px) {
     .game-view {
-      gap: 15px;
-      padding: 0;
+      gap: 8px;
+      padding: 5px 0;
     }
 
-    h1 {
-      font-size: 1.8rem;
-    }
-
-    .controls {
-      gap: 15px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-  }
-
-  @media (max-width: 480px) {
     h1 {
       font-size: 1.5rem;
     }
 
+    .status-bar {
+      max-width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+
+    .player-info {
+      padding: 6px 12px;
+      margin-bottom: 8px;
+    }
+
+    .player-badge {
+      font-size: 1.1rem;
+      padding: 4px 15px;
+    }
+
+    .phase-badge {
+      font-size: 0.9rem;
+      padding: 3px 10px;
+    }
+
+    .turn-badge {
+      font-size: 0.9rem;
+      padding: 5px 12px;
+    }
+
+    .timer-container {
+      height: 35px;
+    }
+
+    .timer-text {
+      font-size: 1.5rem;
+    }
+
+    .controls {
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .game-view {
+      gap: 5px;
+      padding: 5px;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      padding: 3px 0;
+    }
+
+    .status-bar {
+      padding: 6px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+    }
+
+    .player-info {
+      padding: 5px 10px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .you-label {
+      font-size: 0.8rem;
+    }
+
+    .player-color {
+      font-size: 1rem;
+    }
+
+    .player-badge {
+      font-size: 1rem;
+      padding: 3px 12px;
+    }
+
+    .phase-badge {
+      font-size: 0.8rem;
+      padding: 2px 8px;
+    }
+
+    .turn-badge {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+    }
+
+    .timer-container {
+      height: 30px;
+    }
+
+    .timer-text {
+      font-size: 1.3rem;
+    }
+
+    .message {
+      font-size: 0.8rem;
+      margin-top: 6px;
+    }
+
     .controls {
       gap: 10px;
+      margin-top: 6px;
+    }
+  }
+
+  /* Very small screens (320px and below) */
+  @media (max-width: 360px) {
+    h1 {
+      font-size: 1rem;
+    }
+
+    .status-bar {
+      padding: 5px;
+    }
+
+    .player-badge {
+      font-size: 0.9rem;
+      padding: 2px 10px;
+    }
+
+    .turn-badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
+
+    .timer-text {
+      font-size: 1.1rem;
+    }
+
+    .timer-container {
+      height: 25px;
     }
   }
 </style>
