@@ -43,12 +43,12 @@ export const CHARACTERS: Record<CharacterType, CharacterStats> = {
     },
     [CharacterType.HEAVY_GUARDIAN]: {
         name: 'Heavy Guardian',
-        description: '不死身の要塞。shootで死なないが、射程1マス・移動は4方向のみ。',
+        description: '不死身の要塞。shootで死なない。8方向に移動可能だが射撃不可。',
         moveRange: 1,
         moveCount: 1,
-        movePattern: 'orthogonal', // Only 4 directions
-        shootRange: 1, // 1 tile
-        shootPattern: 'all', // 8 directions
+        movePattern: 'all', // 8 directions
+        shootRange: 0, // Cannot shoot
+        shootPattern: 'all', // 8 directions (doesn't matter since shootRange is 0)
         isInvincible: true, // Cannot be killed!
         visualShape: 'square'
     }

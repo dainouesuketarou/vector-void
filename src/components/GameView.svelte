@@ -483,6 +483,7 @@
         {isOnline}
         {waitingForRematch}
         on:restart={handleRematchRequest}
+        on:selectStage={() => onBack()}
         on:menu={handleMenuRequest}
       />
     {/if}

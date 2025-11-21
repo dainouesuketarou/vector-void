@@ -145,6 +145,9 @@
       >
         REMATCH
       </button>
+      <button class="cyber-btn" on:click={() => dispatch("selectStage")}>
+        SELECT STAGE
+      </button>
       <button class="cyber-btn" on:click={() => dispatch("menu")}>
         MENU
       </button>
