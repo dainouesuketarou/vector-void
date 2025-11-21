@@ -67,9 +67,22 @@ io.on('connection', (socket) => {
     });
 
     socket.on('action', ({ word, type, data }) => {
-        // Relay action to others in room (excluding sender)
-        socket.to(word).emit('action', { type, data });
-    });
+    // Relay action to others in room (excluding sender)
+    socket.to(word).emit('action', { type, data });
+  });
+
+  socket.on('reset_game', ({ word }) => {
+    const room = rooms[word];
+    if (!room) return;
+
+    // Generate new seed for reset
+    const newSeed = Math.floor(Math.random() * 1000000);
+    
+    console.log(`Room ${word} resetting with new seed ${newSeed}`);
+    
+    // Broadcast reset to both players
+    io.to(word).emit('game_reset', { seed: newSeed });
+  });
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);

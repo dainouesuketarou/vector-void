@@ -50,6 +50,16 @@
           version++;
         });
 
+        socket.on("game_reset", ({ seed: newSeed }) => {
+          // Received reset from server
+          console.log("Received game_reset with seed:", newSeed);
+          game = new Game(mapConfig, newSeed);
+          destroyedPos = null;
+          resetTimer();
+          updateStatus();
+          version++;
+        });
+
         socket.on("opponent_disconnected", () => {
           alert("対戦相手との接続が切断されました。メニューに戻ります。");
           onBack();
@@ -68,33 +78,15 @@
   });
 
   function startNewGame() {
-    // If game exists, reuse it but reset teleporters and start player
+    // For online mode, emit reset request to server
+    if (isOnline && game) {
+      network.getSocket()?.emit("reset_game", { word: secretWord });
+      // Wait for server to broadcast game_reset event
+      return;
+    }
+
+    // For offline mode or initial game creation
     if (game) {
-      game.resetTeleporters();
-      // game.resetTeleporters() also randomizes start player
-      // We need to re-initialize board units based on new start positions?
-      // Actually Game constructor does that.
-      // Let's just create a new Game instance with the same seed if we want to keep map,
-      // BUT for "reset" button we want NEW random state.
-      // The user said "randomize teleporters on reset".
-      // If we use `new Game(mapConfig, seed)`, it uses the SAME seed -> same teleporters.
-      // We need to update the seed or use the internal RNG state.
-      // `game.resetTeleporters()` uses internal RNG which has advanced.
-      // So calling `game.resetTeleporters()` is correct for "next random state".
-      // But we also need to reset units to start positions.
-      // Game.ts doesn't have a full `reset()` method that does all this.
-      // Let's implement a pseudo-reset here by creating new Game with NEW seed?
-      // Or just use `game.resetTeleporters()` and manually reset units?
-      // Creating new Game with new seed is cleaner and ensures everything is fresh.
-      // But we need to sync this new seed in online mode?
-      // Online mode "Reset" usually means "Rematch" or just local reset?
-      // If online, "Reset" button might be weird if not synced.
-      // Assuming "Reset" is for local play or debug for now, or we sync it.
-      // Wait, the user requirement is "Reset button randomizes teleporters".
-      // In online, usually we don't have a reset button mid-game.
-      // Let's assume this is primarily for the "Reset" button which is currently visible.
-      // If online, we probably shouldn't allow arbitrary reset unless it restarts for both.
-      // For now, let's generate a new seed locally.
       const newSeed = Math.floor(Math.random() * 1000000);
       game = new Game(mapConfig, newSeed);
     } else {
@@ -145,6 +137,13 @@
 
   function handleCellClick(e: CustomEvent) {
     const { r, c } = e.detail;
+    console.log("[DEBUG] handleCellClick called:", {
+      r,
+      c,
+      phase: game.phase,
+      currentPlayer: game.currentPlayer,
+      myPlayerId,
+    });
 
     if (game.gameOver) return;
 
@@ -157,7 +156,9 @@
 
     if (game.phase === Phase.MOVE) {
       // Handle move
-      if (game.move(r, c)) {
+      const moveResult = game.move(r, c);
+      console.log("[DEBUG] Move attempt result:", moveResult);
+      if (moveResult) {
         playSound("move");
         if (isOnline) {
           network.getSocket()?.emit("action", {
@@ -189,6 +190,7 @@
     if (actionTaken) {
       updateStatus();
       version++;
+      console.log("[DEBUG] Action taken, version incremented to:", version);
       resetTimer(); // Reset timer after my action
     }
   }
@@ -202,7 +204,12 @@
     );
     if (game.gameOver) {
       statusMsg = `ゲーム終了 - プレイヤー ${game.winner} の勝利`;
-      playSound("win");
+      // Play victory or defeat sound based on who won
+      if (game.winner === myPlayerId) {
+        playSound("victory");
+      } else {
+        playSound("defeat");
+      }
     } else {
       const phaseText = game.phase === Phase.MOVE ? "移動" : "攻撃";
       const color = game.currentPlayer === 1 ? "シアン" : "マゼンタ";
@@ -222,40 +229,86 @@
     if (!audioCtx) audioCtx = new AudioContext();
     if (audioCtx.state === "suspended") audioCtx.resume();
 
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
 
     if (type === "move") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
       osc.type = "sine";
       osc.frequency.setValueAtTime(300, now);
       osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
       gain.gain.setValueAtTime(0.1, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
     } else if (type === "shoot") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(800, now);
       osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
       gain.gain.setValueAtTime(0.1, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
     } else if (type === "destroy") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
       osc.type = "square";
       osc.frequency.setValueAtTime(100, now);
       osc.frequency.linearRampToValueAtTime(50, now + 0.2);
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
-    } else if (type === "win") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.linearRampToValueAtTime(800, now + 1);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.linearRampToValueAtTime(0, now + 2);
-    }
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === "victory") {
+      // Victory fanfare - triumphant melody
+      const notes = [
+        { freq: 523, time: 0, duration: 0.15 }, // C5
+        { freq: 659, time: 0.15, duration: 0.15 }, // E5
+        { freq: 784, time: 0.3, duration: 0.15 }, // G5
+        { freq: 1047, time: 0.45, duration: 0.4 }, // C6 (hold)
+      ];
 
-    osc.start(now);
-    osc.stop(now + 0.3); // Safety stop
+      notes.forEach((note) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(note.freq, now + note.time);
+        gain.gain.setValueAtTime(0.2, now + note.time);
+        gain.gain.linearRampToValueAtTime(0, now + note.time + note.duration);
+        osc.start(now + note.time);
+        osc.stop(now + note.time + note.duration);
+      });
+    } else if (type === "defeat") {
+      // Defeat sound - descending tones
+      const notes = [
+        { freq: 400, time: 0, duration: 0.2 },
+        { freq: 300, time: 0.15, duration: 0.2 },
+        { freq: 200, time: 0.3, duration: 0.3 },
+      ];
+
+      notes.forEach((note) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(note.freq, now + note.time);
+        gain.gain.setValueAtTime(0.15, now + note.time);
+        gain.gain.linearRampToValueAtTime(0, now + note.time + note.duration);
+        osc.start(now + note.time);
+        osc.stop(now + note.time + note.duration);
+      });
+    }
   }
 </script>
 
@@ -266,6 +319,19 @@
 
   {#if game}
     <div class="status-bar">
+      {#if isOnline}
+        <div class="player-info">
+          <span class="you-label">YOU:</span>
+          <span
+            class="player-color"
+            class:p1={myPlayerId === 1}
+            class:p2={myPlayerId === 2}
+          >
+            PLAYER {myPlayerId}
+          </span>
+        </div>
+      {/if}
+
       <div class="turn-info">
         {#if game.gameOver}
           <span class="game-over">GAME OVER</span>
@@ -280,6 +346,17 @@
           <div class="phase-badge">
             {game.phase === Phase.MOVE ? "MOVE" : "SHOOT"}
           </div>
+          {#if isOnline}
+            <div
+              class="turn-badge"
+              class:your-turn={game.currentPlayer === myPlayerId}
+              class:opponent-turn={game.currentPlayer !== myPlayerId}
+            >
+              {game.currentPlayer === myPlayerId
+                ? "YOUR TURN"
+                : "OPPONENT'S TURN"}
+            </div>
+          {/if}
         {/if}
       </div>
 
@@ -306,6 +383,7 @@
       {game}
       {version}
       {destroyedPos}
+      {myPlayerId}
       on:click={handleCellClick}
     />
 
@@ -313,6 +391,7 @@
       <GameOver
         winner={game.winner}
         winnerColor={getWinnerColor()}
+        {myPlayerId}
         on:restart={startNewGame}
         on:menu={onBack}
       />
@@ -362,6 +441,39 @@
     backdrop-filter: blur(10px);
   }
 
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .you-label {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: #888;
+    letter-spacing: 2px;
+  }
+
+  .player-color {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  .player-color.p1 {
+    color: var(--p1-color);
+  }
+
+  .player-color.p2 {
+    color: var(--p2-color);
+  }
+
   .turn-info {
     display: flex;
     justify-content: center;
@@ -369,6 +481,40 @@
     gap: 15px;
     margin-bottom: 10px;
     width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .turn-badge {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .turn-badge.your-turn {
+    background: rgba(0, 255, 0, 0.2);
+    color: #0f0;
+    border: 1px solid #0f0;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+  }
+
+  .turn-badge.opponent-turn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    border: 1px solid #444;
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .player-badge {

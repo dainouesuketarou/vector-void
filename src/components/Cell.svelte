@@ -6,10 +6,12 @@
   export let cell: Cell;
   export let r: number;
   export let c: number;
-  export let isValidMove: boolean = false;
-  export let isShootableTarget: boolean = false;
+  export let canMove: boolean = false;
+  export let isShootable: boolean = false;
   export let teleportPairId: number | null = null;
   export let isDestroyed: boolean = false;
+  export let myPlayerId: number = 1;
+  export let isMyUnit: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -22,9 +24,10 @@
 <div
   class="cell"
   class:hole={cell.type === CellType.HOLE}
-  class:valid-move={isValidMove}
-  class:shootable-target={isShootableTarget}
+  class:valid-move={canMove}
+  class:shootable-target={isShootable}
   class:destroyed={isDestroyed}
+  class:my-unit={isMyUnit}
   role="button"
   tabindex="0"
   on:click={handleClick}
@@ -55,16 +58,38 @@
 
 <style>
   .cell {
-    width: 100%;
-    height: 100%;
-    background-color: var(--grid-color);
-    border: 1px solid #2a2a2a;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
+    aspect-ratio: 1;
     position: relative;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
+  }
+
+  .cell.my-unit {
+    box-shadow:
+      0 0 15px rgba(255, 255, 255, 0.6),
+      inset 0 0 15px rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    animation: my-unit-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes my-unit-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 15px rgba(255, 255, 255, 0.6),
+        inset 0 0 15px rgba(255, 255, 255, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 25px rgba(255, 255, 255, 0.8),
+        inset 0 0 20px rgba(255, 255, 255, 0.5);
+    }
   }
 
   .cell:hover {

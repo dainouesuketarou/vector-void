@@ -4,9 +4,13 @@
 
   export let winner: PlayerId | null;
   export let winnerColor: string;
+  export let myPlayerId: number = 1; // Add myPlayerId to know if this player won
 
   const dispatch = createEventDispatcher();
   let canvas: HTMLCanvasElement;
+
+  // Determine if this player won
+  $: isVictory = winner === myPlayerId;
 
   onMount(() => {
     if (canvas) {
@@ -39,7 +43,7 @@
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.life = 100;
-        this.color = winnerColor;
+        this.color = isVictory ? winnerColor : "#ff3333"; // Red for defeat
         this.size = Math.random() * 4 + 1;
       }
 
@@ -82,22 +86,32 @@
 
 <div
   class="overlay"
+  class:victory={isVictory}
+  class:defeat={!isVictory}
   style="background: linear-gradient(135deg, 
-  {winner === PlayerId.P1
-    ? 'rgba(0, 243, 255, 0.15)'
-    : 'rgba(255, 0, 255, 0.15)'} 0%, 
-  {winner === PlayerId.P1
-    ? 'rgba(0, 243, 255, 0.25)'
-    : 'rgba(255, 0, 255, 0.25)'} 100%),
+  {isVictory
+    ? winner === PlayerId.P1
+      ? 'rgba(0, 243, 255, 0.15)'
+      : 'rgba(255, 0, 255, 0.15)'
+    : 'rgba(255, 51, 51, 0.15)'} 0%, 
+  {isVictory
+    ? winner === PlayerId.P1
+      ? 'rgba(0, 243, 255, 0.25)'
+      : 'rgba(255, 0, 255, 0.25)'
+    : 'rgba(255, 51, 51, 0.25)'} 100%),
   rgba(0, 0, 0, 0.85);"
 >
   <canvas bind:this={canvas}></canvas>
   <div class="content">
-    <div class="trophy">🏆</div>
+    <div class="trophy">{isVictory ? "🏆" : "💀"}</div>
 
     <div
       class="winner-badge"
-      style="background: {winnerColor}; box-shadow: 0 0 40px {winnerColor};"
+      class:victory-badge={isVictory}
+      class:defeat-badge={!isVictory}
+      style="background: {isVictory
+        ? winnerColor
+        : '#666'}; box-shadow: 0 0 40px {isVictory ? winnerColor : '#ff3333'};"
     >
       {#if winner === PlayerId.P1}
         PLAYER 1
@@ -106,7 +120,13 @@
       {/if}
     </div>
 
-    <h1 class="victory-text">VICTORY!</h1>
+    <h1
+      class="result-text"
+      class:victory-text={isVictory}
+      class:defeat-text={!isVictory}
+    >
+      {isVictory ? "VICTORY!" : "DEFEAT"}
+    </h1>
 
     <div class="buttons">
       <button class="cyber-btn large" on:click={() => dispatch("restart")}
@@ -221,14 +241,32 @@
     }
   }
 
-  .victory-text {
+  .result-text {
     font-family: var(--font-display);
-    font-size: 3rem;
+    font-size: 5rem;
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 15px;
-    text-shadow: 0 0 20px #fff;
     animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both;
+  }
+
+  .victory-text {
+    text-shadow:
+      0 0 30px #ffd700,
+      0 0 60px #ffd700;
+    color: #ffd700;
+  }
+
+  .defeat-text {
+    text-shadow:
+      0 0 30px #ff3333,
+      0 0 60px #ff3333;
+    color: #ff3333;
+    letter-spacing: 20px;
+  }
+
+  .defeat-badge {
+    opacity: 0.7;
   }
 
   .buttons {

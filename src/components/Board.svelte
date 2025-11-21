@@ -5,8 +5,9 @@
   import type { Game } from "../lib/game/Game";
 
   export let game: Game;
-  export let version: number;
+  export let version: number = 0;
   export let destroyedPos: { r: number; c: number } | null = null;
+  export let myPlayerId: number = 1;
 
   const dispatch = createEventDispatcher();
 
@@ -93,10 +94,12 @@
         {cell}
         {r}
         {c}
-        isValidMove={checkMove(r, c, version)}
-        isShootableTarget={isShootableTarget(r, c, version)}
+        canMove={checkMove(r, c, version)}
+        isShootable={isShootableTarget(r, c, version)}
         teleportPairId={getTeleportPairId(cell)}
         isDestroyed={checkDestroyed(r, c, destroyedPos)}
+        {myPlayerId}
+        isMyUnit={cell.hasUnit() && cell.unit === myPlayerId}
         on:click
       />
     {/each}
