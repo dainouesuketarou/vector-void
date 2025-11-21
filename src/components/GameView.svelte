@@ -13,6 +13,7 @@
 
   export let mapConfig: MapConfig;
   export let onBack: () => void;
+  export let onBackToStageSelect: () => void;
   export let isOnline: boolean = false;
   export let myPlayerId: number = 1;
   export let secretWord: string = "";
@@ -483,7 +484,7 @@
         {isOnline}
         {waitingForRematch}
         on:restart={handleRematchRequest}
-        on:selectStage={() => onBack()}
+        on:selectStage={onBackToStageSelect}
         on:menu={handleMenuRequest}
       />
     {/if}

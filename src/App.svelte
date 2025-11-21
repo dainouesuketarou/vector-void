@@ -98,6 +98,11 @@
     p2Character = CharacterType.VOID_DRIFTER;
     network.disconnect();
   }
+
+  function handleBackToStageSelect() {
+    // Return to stage select without resetting everything
+    appState = "stage_select";
+  }
 </script>
 
 <main>
@@ -144,6 +149,7 @@
       {p1Character}
       {p2Character}
       onBack={handleBack}
+      onBackToStageSelect={handleBackToStageSelect}
     />
   {/if}
 </main>

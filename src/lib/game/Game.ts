@@ -183,6 +183,21 @@ export class Game {
     }
 
     canShootFrom(r: number, c: number, player: PlayerId): boolean {
+        const stats = getCharacterStats(this.characters[player]);
+        // Special case: Heavy Guardian (shootRange == 0) can only shoot adjacent enemy
+        if (stats.shootRange === 0) {
+            // Check 8 neighboring cells for opponent unit
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const cell = this.board.getCell(r + dr, c + dc);
+                    if (cell && cell.hasUnit() && cell.unit !== player) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
         const dirs = this.getValidDirections(player);
         for (const dir of dirs) {
             if (this.simulateShot(r, c, dir, player)) return true;
@@ -230,6 +245,7 @@ export class Game {
     // Get all shootable target positions from a given position
     getShootableTargets(fromR: number, fromC: number, player: PlayerId): Position[] {
         const targets: Position[] = [];
+        const stats = getCharacterStats(this.characters[player]);
         const dirs = this.getValidDirections(player);
         
         for (const dir of dirs) {
@@ -238,6 +254,21 @@ export class Game {
                 // Avoid duplicates
                 if (!targets.some(t => t.r === target.r && t.c === target.c)) {
                     targets.push(target);
+                }
+            }
+        }
+        // Special case for Heavy Guardian (shootRange == 0): only adjacent enemy cells are valid
+        if (stats.shootRange === 0) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const cell = this.board.getCell(fromR + dr, fromC + dc);
+                    if (cell && cell.hasUnit() && cell.unit !== player) {
+                        const pos = { r: fromR + dr, c: fromC + dc };
+                        if (!targets.some(t => t.r === pos.r && t.c === pos.c)) {
+                            targets.push(pos);
+                        }
+                    }
                 }
             }
         }
