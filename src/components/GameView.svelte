@@ -399,7 +399,13 @@
   {/if}
 
   <div class="controls">
-    <button class="cyber-btn" on:click={startNewGame}>リセット</button>
+    <button
+      class="cyber-btn"
+      on:click={startNewGame}
+      disabled={isOnline && game && game.currentPlayer !== myPlayerId}
+    >
+      リセット
+    </button>
     <button class="cyber-btn" on:click={onBack}>メニュー</button>
   </div>
 </div>
