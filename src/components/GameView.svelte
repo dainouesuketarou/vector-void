@@ -324,7 +324,6 @@
     <button class="cyber-btn" on:click={onBack}>メニュー</button>
   </div>
 </div>
-```
 
 <style>
   .game-view {
