@@ -61,6 +61,7 @@
   let hoveredMap: MapConfig | null = null;
 
   onMount(() => {
+    waitingForOpponent = false; // Reset state
     if (isOnline) {
       const socket = network.getSocket();
       if (socket) {

@@ -12,7 +12,8 @@
   let canvas: HTMLCanvasElement;
 
   // Determine if this player won
-  $: isVictory = winner === myPlayerId;
+  // In offline mode, it's always a "Victory" screen (someone won)
+  $: isVictory = !isOnline || winner === myPlayerId;
 
   onMount(() => {
     if (canvas) {
@@ -140,7 +141,10 @@
     <div class="buttons">
       <button
         class="cyber-btn large"
-        on:click={() => dispatch("restart")}
+        on:click={() => {
+          console.log("Rematch button clicked");
+          dispatch("restart");
+        }}
         disabled={waitingForRematch}
       >
         REMATCH

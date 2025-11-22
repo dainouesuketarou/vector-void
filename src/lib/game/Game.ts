@@ -114,6 +114,22 @@ export class Game {
         this.units[this.currentPlayer] = { r, c };
         cell.unit = this.currentPlayer;
 
+        // Heavy Guardian Trail Destruction: Destroy the tile we just left
+        const stats = getCharacterStats(this.characters[this.currentPlayer]);
+        if (stats.shootRange === 0) {
+            const oldCell = this.board.getCell(oldPos.r, oldPos.c);
+            if (oldCell) {
+                const wasTeleport = oldCell.isTeleport();
+                const teleportId = oldCell.teleportId;
+                
+                oldCell.destroy();
+                
+                if (wasTeleport && teleportId !== null) {
+                     this.board.respawnTeleporter(teleportId);
+                }
+            }
+        }
+
         // Check Teleport
         if (cell.isTeleport()) {
             const teleDest = this.board.getTeleportDestination(r, c);
@@ -177,9 +193,9 @@ export class Game {
         if (cell.isHole() || cell.isMirror()) return false;
         if (cell.hasUnit()) return false;
 
-        // If character cannot shoot (shootRange == 0), skip canShootFrom check
-        const stats = getCharacterStats(this.characters[player]);
-        if (stats.shootRange !== 0 && !this.canShootFrom(r, c, player)) return false;
+        // Removed canShootFrom check to allow movement even if shooting is not possible from destination
+        // This fixes the issue where Swift Shadow couldn't move to center tile
+        // if (stats.shootRange !== 0 && !this.canShootFrom(r, c, player)) return false;
 
         return true;
     }
@@ -291,7 +307,11 @@ export class Game {
             if (!cell) return null;
             
             // Check shoot range
-            if (stats.shootRange !== -1 && distance > stats.shootRange) return null;
+            if (stats.shootRange !== -1) {
+                // Special case for Heavy Guardian: shootRange 0 means adjacent only (range 1)
+                const maxRange = stats.shootRange === 0 ? 1 : stats.shootRange;
+                if (distance > maxRange) return null;
+            }
             
             if (cell.hasUnit()) return { r: currR, c: currC }; // Unit is a target
             if (cell.isHole()) return null;
