@@ -43,7 +43,7 @@ export const CHARACTERS: Record<CharacterType, CharacterStats> = {
     },
     [CharacterType.HEAVY_GUARDIAN]: {
         name: 'Heavy Guardian',
-        description: '不死身の要塞。shootで死なない。8方向に移動可能だが射撃不可。',
+        description: '移動した床を破壊する重量級。8方向に移動可能。攻撃は隣接する敵のみ可能。',
         moveRange: 1,
         moveCount: 1,
         movePattern: 'all', // 8 directions

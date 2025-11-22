@@ -318,6 +318,9 @@ export class Game {
 
             // Return landing position
             if (cell.isTeleport() || cell.type === CellType.EMPTY) {
+                // Heavy Guardian (shootRange === 0) cannot shoot empty tiles
+                if (stats.shootRange === 0) return null;
+
                 return { r: currR, c: currC };
             }
 
