@@ -10,53 +10,7 @@
   const dispatch = createEventDispatcher();
   let waitingForOpponent = false;
 
-  const MAPS: MapConfig[] = [
-    {
-      id: "classic",
-      name: "CLASSIC (5x5)",
-      description: "スタンダードな戦場。中央の穴に注意せよ。",
-      size: 5,
-      layout: [
-        [0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0],
-        [0, 1, 0, 1, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0],
-      ].map((r) => r.map((c) => c as CellType)),
-    },
-    {
-      id: "duel",
-      name: "DUEL (7x7)",
-      description: "広大なエリアでの駆け引き。障害物を利用して射線を切れ。",
-      size: 7,
-      layout: [
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 1, 0],
-        [0, 0, 0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 1, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0],
-        [0, 1, 0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-      ].map((r) => r.map((c) => c as CellType)),
-    },
-    {
-      id: "void",
-      name: "VOID (9x9)",
-      description: "多くの穴が存在する危険地帯。足元に気をつけろ。",
-      size: 9,
-      layout: [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 1, 0, 1, 0, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 1, 0, 1, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 1, 0, 1, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 1, 0, 1, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-      ].map((r) => r.map((c) => c as CellType)),
-    },
-  ];
+  import { MAPS } from "../lib/game/Maps";
 
   let hoveredMap: MapConfig | null = null;
 
@@ -91,9 +45,11 @@
 
   function selectMap(map: MapConfig) {
     if (isOnline) {
-      waitingForOpponent = true;
+      // waitingForOpponent = true; // Don't wait for opponent, go to character select immediately
       const socket = network.getSocket();
       socket?.emit("stage_vote", { word: secretWord, mapId: map.id });
+      // Proceed immediately
+      dispatch("select", { map, seed: Date.now() }); // Seed doesn't matter here for online, will be synced later
     } else {
       dispatch("select", { map, seed: Date.now() });
     }

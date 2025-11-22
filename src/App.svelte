@@ -7,6 +7,7 @@
   import { CharacterType } from "./lib/game/Character";
   import { network } from "./lib/network";
   import "./assets/global.css";
+  import { MAPS } from "./lib/game/Maps";
 
   let appState:
     | "menu"
@@ -87,6 +88,16 @@
     // Online mode: server sends both characters
     p1Character = e.detail.p1Character;
     p2Character = e.detail.p2Character;
+
+    // Sync map and seed if provided (Online)
+    if (e.detail.mapId) {
+      const mapConfig = MAPS.find((m) => m.id === e.detail.mapId);
+      if (mapConfig) {
+        currentMap = mapConfig;
+      }
+      seed = e.detail.seed;
+    }
+
     appState = "game";
   }
 

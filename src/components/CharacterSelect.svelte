@@ -25,9 +25,11 @@
           console.log("CharacterSelect: Received game_start", {
             p1Character,
             p2Character,
+            mapId,
+            seed,
           });
-          // Dispatch to App.svelte with both characters
-          dispatch("gameStart", { p1Character, p2Character });
+          // Dispatch to App.svelte with characters and map info
+          dispatch("gameStart", { p1Character, p2Character, mapId, seed });
         });
       }
     }

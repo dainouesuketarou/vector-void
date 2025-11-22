@@ -66,6 +66,10 @@
             version++;
             game = game; // Force Svelte to detect game.gameOver change
             clearInterval(timerInterval);
+          } else if (type === "stage_select") {
+            // Opponent requested stage select
+            console.log("Received stage_select action");
+            onBackToStageSelect();
           }
           updateStatus();
           version++;
@@ -304,6 +308,21 @@
       // Offline mode - just go back immediately
       onBack();
     }
+    } else {
+      // Offline mode - just go back immediately
+      onBack();
+    }
+  }
+
+  function handleSelectStageRequest() {
+    console.log("handleSelectStageRequest called");
+    onBackToStageSelect();
+    if (isOnline) {
+      network.getSocket()?.emit("action", {
+        word: secretWord,
+        type: "stage_select",
+      });
+    }
   }
 
   function getWinnerColor(): string {
@@ -484,7 +503,9 @@
         {isOnline}
         {waitingForRematch}
         on:restart={handleRematchRequest}
-        on:selectStage={onBackToStageSelect}
+        on:restart={handleRematchRequest}
+        on:selectStage={handleSelectStageRequest}
+        on:menu={handleMenuRequest}
         on:menu={handleMenuRequest}
       />
     {/if}
