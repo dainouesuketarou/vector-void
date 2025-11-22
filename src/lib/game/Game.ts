@@ -11,7 +11,6 @@ export class Game {
     units: Record<PlayerId, Position>;
     characters: Record<PlayerId, CharacterType>;
     moveCounter: number = 0; // Track number of moves made this turn
-    heavyGuardianCooldown: Record<PlayerId, number> = { [PlayerId.P1]: 0, [PlayerId.P2]: 0 }; // Cooldown for Heavy Guardian movement
     gameOver: boolean = false;
     winner: PlayerId | null = null;
     rng: RNG;
@@ -111,18 +110,11 @@ export class Game {
         const oldPos = this.units[this.currentPlayer];
         this.board.grid[oldPos.r][oldPos.c].unit = null;
 
-        // Set new position
         this.units[this.currentPlayer] = { r, c };
         cell.unit = this.currentPlayer;
 
-        // Heavy Guardian Cooldown: If moving, set cooldown to 1 (skip next turn's move phase)
-        const stats = getCharacterStats(this.characters[this.currentPlayer]);
-        if (stats.shootRange === 0) {
-            this.heavyGuardianCooldown[this.currentPlayer] = 1;
-        }
-
         // Heavy Guardian Trail Destruction: Destroy the tile we just left
-        // stats is already defined above
+        const stats = getCharacterStats(this.characters[this.currentPlayer]);
         if (stats.shootRange === 0) {
             const oldCell = this.board.getCell(oldPos.r, oldPos.c);
             if (oldCell) {
@@ -438,16 +430,6 @@ export class Game {
     private endTurn() {
         this.currentPlayer = this.currentPlayer === PlayerId.P1 ? PlayerId.P2 : PlayerId.P1;
         
-        // Check Heavy Guardian Cooldown
-        if (this.heavyGuardianCooldown[this.currentPlayer] > 0) {
-            this.heavyGuardianCooldown[this.currentPlayer]--;
-            // Skip MOVE phase, go straight to SHOOT phase
-            // But we need to check if shooting is possible (adjacent enemies for HG)
-            // If not, turn ends immediately (handled by checkAndAdvancePhase)
-            this.checkAndAdvancePhase();
-            return;
-        }
-
         this.phase = Phase.MOVE;
         
         if (!this.canMove(this.currentPlayer)) {

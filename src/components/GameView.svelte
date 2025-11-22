@@ -160,6 +160,7 @@
     }
 
     destroyedPos = null;
+    waitingForRematch = false; // Reset rematch state
     resetTimer();
     updateStatus();
     version++;
@@ -300,6 +301,7 @@
   }
 
   function handleMenuRequest() {
+    waitingForRematch = false; // Reset rematch state
     if (isOnline) {
       // Send menu request to server (cancels rematch)
       network.getSocket()?.emit("menu_request", { word: secretWord });

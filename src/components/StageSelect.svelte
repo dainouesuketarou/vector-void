@@ -14,8 +14,15 @@
 
   let hoveredMap: MapConfig | null = null;
 
+  let pendingMapId: string | null = null;
+  let pendingSeed: number | null = null;
+  let hasVoted = false;
+
   onMount(() => {
     waitingForOpponent = false; // Reset state
+    hasVoted = false;
+    pendingMapId = null;
+
     if (isOnline) {
       const socket = network.getSocket();
       if (socket) {
@@ -24,9 +31,18 @@
         socket.off("stage_selected");
         socket.on("stage_selected", ({ mapId, seed }) => {
           console.log("StageSelect: Received stage_selected", { mapId, seed });
-          const map = MAPS.find((m) => m.id === mapId);
-          if (map) {
-            dispatch("select", { map, seed });
+
+          if (hasVoted) {
+            // If we already voted, proceed immediately
+            const map = MAPS.find((m) => m.id === mapId);
+            if (map) {
+              dispatch("select", { map, seed });
+            }
+          } else {
+            // If we haven't voted, store it and wait for user input
+            console.log("StageSelect: Storing pending map selection");
+            pendingMapId = mapId;
+            pendingSeed = seed;
           }
         });
       }
@@ -44,12 +60,26 @@
   });
 
   function selectMap(map: MapConfig) {
+    hasVoted = true;
     if (isOnline) {
       // waitingForOpponent = true; // Don't wait for opponent, go to character select immediately
       const socket = network.getSocket();
       socket?.emit("stage_vote", { word: secretWord, mapId: map.id });
-      // Proceed immediately
-      dispatch("select", { map, seed: Date.now() }); // Seed doesn't matter here for online, will be synced later
+
+      // If we have a pending selection (server already decided), use that
+      if (pendingMapId) {
+        const pendingMap = MAPS.find((m) => m.id === pendingMapId);
+        if (pendingMap) {
+          dispatch("select", {
+            map: pendingMap,
+            seed: pendingSeed || Date.now(),
+          });
+          return;
+        }
+      }
+
+      // Otherwise proceed with our selection (will be synced by game_start later if different)
+      dispatch("select", { map, seed: Date.now() });
     } else {
       dispatch("select", { map, seed: Date.now() });
     }
