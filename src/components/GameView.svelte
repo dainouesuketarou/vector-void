@@ -308,10 +308,6 @@
       // Offline mode - just go back immediately
       onBack();
     }
-    } else {
-      // Offline mode - just go back immediately
-      onBack();
-    }
   }
 
   function handleSelectStageRequest() {
